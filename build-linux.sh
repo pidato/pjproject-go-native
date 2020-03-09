@@ -15,6 +15,7 @@ autoreconf -i
 ./configure --enable-static --disable-shared CXXFLAGS="-Wall -fPIC" CFLAGS="-Wall -fPIC"
 make
 cd ../opus || exit
+autoreconf -i
 ./configure --enable-static --disable-shared CXXFLAGS="-Wall -fPIC" CFLAGS="-Wall -fPIC"
 make
 cd ../openssl || exit

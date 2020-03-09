@@ -24,6 +24,7 @@ mkdir libs/speex
 mkdir libs/libilbccodec
 mkdir libs/g7221
 mkdir libs/webrtc
+mkdir libs/yuv
 mkdir libs/pjsua
 mkdir libs/pjsua2
 mkdir libs/pj-ext
@@ -37,6 +38,7 @@ cp -r pjproject/pjmedia/include ./
 cp -r pjproject/pjnath/include ./
 cp -r pjproject/pjsip/include ./
 cp -r openssl/include ./include/openssl
+cp library.h include/pjsua2/pidato.hpp
 cp ./opus/.libs/libopus.a ./libs/opus/libopus.a
 cp ./fvad/src/.libs/libfvad.a ./libs/fvad/libfvad.a
 cp ./openssl/libssl.a ./libs/ssl/libssl.a
@@ -60,6 +62,7 @@ cp ./pjproject/third_party/lib/libspeex-x86_64-apple-darwin19.3.0.a ./libs/speex
 cp ./pjproject/third_party/lib/libilbccodec-x86_64-apple-darwin19.3.0.a ./libs/libilbccodec/libilbccodec.a
 cp ./pjproject/third_party/lib/libg7221codec-x86_64-apple-darwin19.3.0.a ./libs/g7221/libg7221.a
 cp ./pjproject/third_party/lib/libwebrtc-x86_64-apple-darwin19.3.0.a ./libs/webrtc/libwebrtc.a
+cp ./pjproject/third_party/lib/libyuv-x86_64-apple-darwin19.3.0.a ./libs/yuv/libyuv.a
 cp ./pjproject/pjsip/lib/libpjsua-x86_64-apple-darwin19.3.0.a ./libs/pjsua/libpjsua.a
 cp ./pjproject/pjsip/lib/libpjsua2-x86_64-apple-darwin19.3.0.a ./libs/pjsua2/libpjsua2.a
 cp ./libpj-ext.a ./libs/pj-ext/libpj-ext.a
@@ -107,6 +110,8 @@ cd ../g7221
 ar -x libg7221.a
 cd ../webrtc
 ar -x libwebrtc.a
+cd ../yuv
+ar -x libyuv.a
 cd ../pjsua
 ar -x libpjsua.a
 cd ../pjsua2
@@ -117,4 +122,4 @@ cd ../amrnb
 ar -x libopencore-amrnb.a
 cd ../
 rm srtp/aes_icm.o
-ar -q libpidato.a fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-videodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o pjsua/*.o pjsua2/*.o amrnb/*.o pj-ext/*.o
+ar -q libpidato.a fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-videodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o yuv/*.o pjsua/*.o pjsua2/*.o amrnb/*.o pj-ext/*.o

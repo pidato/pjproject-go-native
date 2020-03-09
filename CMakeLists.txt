@@ -23,7 +23,6 @@ include_directories(./include)
 #include_directories(./pjproject/third_party/include)
 
 #link_directories(/usr/local/lib)
-#link_directories(libs/)
 link_directories(fvad/src/.libs)
 link_directories(opus/.libs)
 link_directories(openssl)
@@ -180,6 +179,7 @@ ELSEIF (UNIX)
             ilbccodec
             g7221codec
             webrtc
+            yuv
             pjsua
             pjsua2
             )
@@ -211,6 +211,7 @@ ELSEIF (UNIX)
             ilbccodec
             g7221codec
             webrtc
+            yuv
             pjsua
             pjsua2
             )

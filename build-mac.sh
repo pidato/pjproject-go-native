@@ -17,6 +17,7 @@ make clean
 make
 cd ../
 cd opus || exit
+autoreconf -i
 ./configure --enable-static --enable-shared CXXFLAGS="-Wall -fPIC" CFLAGS="-Wall -fPIC"
 make clean
 make
@@ -31,3 +32,7 @@ cd pjproject
 ./configure --enable-shared --with-opencore-amr=$opencore_amr_dir --with-opus=$opus_dir --with-ssl=$ssl_dir CXXFLAGS="-std=c++17 -Wall -fPIC" CFLAGS="-Wall -fPIC"
 make clean
 make dep && make
+cd ../
+cmake .
+make
+sh assemble-mac.sh

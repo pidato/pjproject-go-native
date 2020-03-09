@@ -4,6 +4,10 @@
 *.dll
 *.so
 *.dylib
+*.a
+*.o
+*.lo
+*.la
 
 cmake-build-debug
 
@@ -14,7 +18,7 @@ cmake-build-debug
 *.out
 
 libs/
-./include/
+./include
 gen/
 
 /autom4te.cache/

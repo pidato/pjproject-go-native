@@ -117,7 +117,7 @@ public:
 #if __APPLE__
                         pthread_setname_np(name.data());
 #elif __linux__
-                        pthread_setname_np(pthread_self(), name.data(), name.length());
+                        pthread_setname_np(pthread_self(), name.data());
 #elif __unix__
                         pthread_setname_np(name.data());
 #endif

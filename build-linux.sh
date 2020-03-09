@@ -23,6 +23,10 @@ export CFLAGS="-fPIC -Wall"
 ./config
 make
 cd ../pjproject || exit
-./configure --enable-epoll --with-opencore-amr=$opencore_amr_dir --with-opus=$opus_dir --with-ssl=$ssl_dir CXXFLAGS="-Wall -fPIC" CFLAGS="-Wall -fPIC"
+./configure --enable-shared --enable-epoll --with-opencore-amr=$opencore_amr_dir --with-opus=$opus_dir --with-ssl=$ssl_dir CXXFLAGS="-Wall -fPIC" CFLAGS="-Wall -fPIC"
 make clean
 make dep && make
+cd ../
+cmake .
+make
+sh assemble-mac.sh

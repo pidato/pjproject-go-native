@@ -157,19 +157,11 @@ int main() {
 
     {
         auto amp = std::make_unique<AudioMediaPlayer>();
-//    amp.createPlayer("/Users/cmo/mologix-co/phone/recording.wav", PJMEDIA_FILE_NO_LOOP);
-        amp->createPlayer("/Users/cmo/mologix-co/phone/recording.wav");
-
-        AudioMediaPlayer amp2;
-        amp2.createPlayer("/Users/cmo/mologix-co/phone/recording.wav");
-
-        AudioMediaPlayer amp3;
-        amp3.createPlayer("/Users/cmo/mologix-co/phone/recording.wav");
+//    amp.createPlayer("recording.wav", PJMEDIA_FILE_NO_LOOP);
+        amp->createPlayer("recording.wav");
 
         auto customPort = std::make_unique<Pi2Port>();
         customPort->create();
-        auto customPort2 = std::make_unique<Pi2Port>();
-        customPort2->create();
 
 
         amp->startTransmit(*customPort);

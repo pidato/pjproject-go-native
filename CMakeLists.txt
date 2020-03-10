@@ -11,7 +11,7 @@ message("\tsuffix: ${CMAKE_FIND_LIBRARY_SUFFIXES}")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
-include_directories(./include)
+include_directories(include)
 #include_directories(./fvad/include)
 #include_directories(./opus/include)
 #include_directories(./openssl/include)
@@ -23,16 +23,19 @@ include_directories(./include)
 #include_directories(./pjproject/third_party/include)
 
 #link_directories(/usr/local/lib)
-link_directories(fvad/src/.libs)
-link_directories(opus/.libs)
-link_directories(openssl)
-link_directories(opencore-amr/amrnb/.libs)
-link_directories(pjproject/pjlib/lib)
-link_directories(pjproject/pjlib-util/lib)
-link_directories(pjproject/pjmedia/lib)
-link_directories(pjproject/pjnath/lib)
-link_directories(pjproject/pjsip/lib)
-link_directories(pjproject/third_party/lib)
+link_directories(libs/fvad)
+#link_directories(./fvad/src/.libs)
+link_directories(libs/opus)
+#link_directories(./opus/.libs)
+link_directories(libs/ssl)
+link_directories(libs/crypto)
+link_directories(./opencore-amr/amrnb/.libs)
+link_directories(./pjproject/pjlib/lib)
+link_directories(./pjproject/pjlib-util/lib)
+link_directories(./pjproject/pjmedia/lib)
+link_directories(./pjproject/pjnath/lib)
+link_directories(./pjproject/pjsip/lib)
+link_directories(./pjproject/third_party/lib)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
@@ -41,55 +44,9 @@ set(CMAKE_CXX_FLAGS "-Wall -fPIC")
 
 set(CMAKE_CXX_STANDARD 17)
 
-#add_library(pjsua_rs main.cpp pi_port.cpp pi_port.h thread_aff.cpp thread_aff.h)
 add_library(pj-ext library.cpp library.h)
-#add_library(pidato-run STATIC library.cpp library.h
-#        fvad/src/.libs/libfvad.a
-#        opus/.libs/libopus.a
-#        openssl/libcrypto.a
-#        openssl/libssl.a
-#        )
 add_executable(pj-ext-run library.h library.cpp main.cpp)
 set_property(TARGET pj-ext PROPERTY POSITION_INDEPENDENT_CODE ON)
-#set_property(TARGET pidato-run PROPERTY POSITION_INDEPENDENT_CODE ON)
-#add_library(pidato-lib library.cpp library.h)
-#add_executable(pjsua_rs main.cpp)
-
-#IF (APPLE)
-#    find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
-#    find_library(CORE_AUDIO_LIBRARY CoreAudio)
-#    find_library(APP_SERVICES_LIBRARY ApplicationServices)
-#    set(EXTRA_LIBS ${CORE_FOUNDATION_LIBRARY} ${CORE_AUDIO_LIBRARY} ${APP_SERVICES_LIBRARY})
-#ENDIF (APPLE)
-
-#target_link_libraries(pidato
-#        -lstdc++
-#        -luuid
-#        -lpthread
-#        fvad/src/.libs/libfvad.a
-#        opus/.libs/libopus.a
-#        openssl/libssl.a
-#        openssl/libcrypto.a
-#        pjproject/pjsip/lib/libpjsip-x86_64-unknown-linux-gnu.a
-#        pjproject/pjsip/lib/libpjsip-ua-x86_64-unknown-linux-gnu.a
-#        pjproject/pjsip/lib/libpjsip-simple-x86_64-unknown-linux-gnu.a
-#        pjproject/pjlib/lib/libpj-x86_64-unknown-linux-gnu.a
-#        pjproject/pjmedia/lib/libpjmedia-x86_64-unknown-linux-gnu.a
-#        pjproject/pjmedia/lib/libpjmedia-codec-x86_64-unknown-linux-gnu.a
-#        pjproject/pjmedia/lib/libpjmedia-audiodev-x86_64-unknown-linux-gnu.a
-#        pjproject/pjnath/lib/libpjnath-x86_64-unknown-linux-gnu.a
-#        pjproject/pjlib-util/lib/libpjlib-util-x86_64-unknown-linux-gnu.a
-#        pjproject/third_party/lib/libsrtp-x86_64-unknown-linux-gnu.a
-#        pjproject/third_party/lib/libresample-x86_64-unknown-linux-gnu.a
-#        pjproject/third_party/lib/libgsmcodec-x86_64-unknown-linux-gnu.a
-#        pjproject/third_party/lib/libspeex-x86_64-unknown-linux-gnu.a
-#        pjproject/third_party/lib/libilbccodec-x86_64-unknown-linux-gnu.a
-#        pjproject/third_party/lib/libg7221codec-x86_64-unknown-linux-gnu.a
-#        pjproject/third_party/lib/libwebrtc-x86_64-unknown-linux-gnu
-#        pjproject/pjsip/lib/libpjsua-x86_64-unknown-linux-gnu
-#        pjproject/pjsip/lib/libpjsua2-x86_64-unknown-linux-gnu
-#)
-
 
 if (APPLE)
     target_link_libraries(pj-ext
@@ -97,29 +54,29 @@ if (APPLE)
             dl
             m
             pthread
-#            opencore-amrnb
-#            fvad
-#            opus
-#            ssl
-#            crypto
-#            pjsip-x86_64-apple-darwin19.3.0
-#            pjsip-ua-x86_64-apple-darwin19.3.0
-#            pjsip-simple-x86_64-apple-darwin19.3.0
-#            pj-x86_64-apple-darwin19.3.0
-#            pjmedia-x86_64-apple-darwin19.3.0
-#            pjmedia-codec-x86_64-apple-darwin19.3.0
-#            pjmedia-audiodev-x86_64-apple-darwin19.3.0
-#            pjnath-x86_64-apple-darwin19.3.0
-#            pjlib-util-x86_64-apple-darwin19.3.0
-#            srtp-x86_64-apple-darwin19.3.0
-#            resample-x86_64-apple-darwin19.3.0
-#            gsmcodec-x86_64-apple-darwin19.3.0
-#            speex-x86_64-apple-darwin19.3.0
-#            ilbccodec-x86_64-apple-darwin19.3.0
-#            g7221codec-x86_64-apple-darwin19.3.0
-#            webrtc-x86_64-apple-darwin19.3.0
-#            pjsua-x86_64-apple-darwin19.3.0
-#            pjsua2-x86_64-apple-darwin19.3.0
+            #            opencore-amrnb
+            #            fvad
+            #            opus
+            #            ssl
+            #            crypto
+            #            pjsip-x86_64-apple-darwin19.3.0
+            #            pjsip-ua-x86_64-apple-darwin19.3.0
+            #            pjsip-simple-x86_64-apple-darwin19.3.0
+            #            pj-x86_64-apple-darwin19.3.0
+            #            pjmedia-x86_64-apple-darwin19.3.0
+            #            pjmedia-codec-x86_64-apple-darwin19.3.0
+            #            pjmedia-audiodev-x86_64-apple-darwin19.3.0
+            #            pjnath-x86_64-apple-darwin19.3.0
+            #            pjlib-util-x86_64-apple-darwin19.3.0
+            #            srtp-x86_64-apple-darwin19.3.0
+            #            resample-x86_64-apple-darwin19.3.0
+            #            gsmcodec-x86_64-apple-darwin19.3.0
+            #            speex-x86_64-apple-darwin19.3.0
+            #            ilbccodec-x86_64-apple-darwin19.3.0
+            #            g7221codec-x86_64-apple-darwin19.3.0
+            #            webrtc-x86_64-apple-darwin19.3.0
+            #            pjsua-x86_64-apple-darwin19.3.0
+            #            pjsua2-x86_64-apple-darwin19.3.0
             )
 
     target_link_libraries(pj-ext-run
@@ -139,6 +96,7 @@ if (APPLE)
             pjmedia-x86_64-apple-darwin19.3.0
             pjmedia-codec-x86_64-apple-darwin19.3.0
             pjmedia-audiodev-x86_64-apple-darwin19.3.0
+            pjmedia-videodev-x86_64-apple-darwin19.3.0
             pjnath-x86_64-apple-darwin19.3.0
             pjlib-util-x86_64-apple-darwin19.3.0
             srtp-x86_64-apple-darwin19.3.0
@@ -148,6 +106,7 @@ if (APPLE)
             ilbccodec-x86_64-apple-darwin19.3.0
             g7221codec-x86_64-apple-darwin19.3.0
             webrtc-x86_64-apple-darwin19.3.0
+            yuv-x86_64-apple-darwin19.3.0
             pjsua-x86_64-apple-darwin19.3.0
             pjsua2-x86_64-apple-darwin19.3.0
             )

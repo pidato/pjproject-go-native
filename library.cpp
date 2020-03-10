@@ -6,7 +6,7 @@ static inline int64_t high_resolution_now() {
     return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-PiAudioFrameBuffer::PiAudioFrameBuffer(int port, unsigned frames, unsigned samplesPerFrame) {
+PiAudioFrameBuffer::PiAudioFrameBuffer(void *encoder, int port, unsigned frames, unsigned samplesPerFrame) {
     _ring = std::vector<PiAudioFrame>(frames);
     _bufSize = samplesPerFrame * 2; // Only 16bit PCM is supported.
     _samplesPerFrame = samplesPerFrame;
@@ -16,7 +16,8 @@ PiAudioFrameBuffer::PiAudioFrameBuffer(int port, unsigned frames, unsigned sampl
     _tail = 0;
 
     for (auto &frame : _ring) {
-        frame.port = (uint16_t)port;
+        frame.encoder = encoder;
+        frame.port = (uint16_t) port;
         frame.pcm_samples = samplesPerFrame;
     }
 }
@@ -48,14 +49,19 @@ int PiAudioFrameBuffer::push(uint32_t cycle, pjmedia_frame *frame, pj_uint64_t f
     }
 
     auto newFrame = &_ring[_count % _ring.size()];
+    newFrame->enqueuedAt = 0;
+    newFrame->processedCPU = 0;
     newFrame->cycle = cycle;
+    newFrame->timestamp = frame->timestamp.u64;
     newFrame->frame_num = frameNum;
+    newFrame->vad_cpu = 0;
+    newFrame->opus_cpu = 0;
+    newFrame->processed = false;
+    newFrame->dtx = false;
+    newFrame->vad = 0;
     newFrame->pcm_bytes = (int16_t) frame->size;
     newFrame->pcm_samples = frame->size / 2;
     newFrame->opus_size = 0;
-    newFrame->timestamp = frame->timestamp.u64;
-    newFrame->processed = false;
-    newFrame->vad_cpu = 0;
 
     // Copy PCM.
     memcpy((void *) &newFrame->pcm, frame->buf, frame->size);
@@ -85,6 +91,165 @@ PiAudioFrame *PiAudioFrameBuffer::get(int index) {
 PiAudioFrame *PiAudioFrameBuffer::back(int count) {
     return get(_size - count - 1);
 }
+
+
+static const int PI_MAX_AUDIO_FRAMES = 4096;
+
+
+//class PiAudioFrameNotifier {
+//public:
+//    PiAudioFrameNotifier() {
+////        _thread = std::thread([this] { run(); });
+//    }
+//
+//    ~PiAudioFrameNotifier() {
+//        {
+//            std::unique_lock<std::mutex> lock(_queueMutex);
+//            _stop = true;
+//        }
+//        _thread.join();
+//    }
+//
+//    static std::shared_ptr<PiAudioFrameNotifier> instance() {
+//        static std::shared_ptr<PiAudioFrameNotifier> _notifier =
+//                std::make_shared<PiAudioFrameNotifier>();
+//        return _notifier;
+//    }
+//
+//    void enqueue(PiAudioFrame *frame) {
+//        std::unique_lock<std::mutex> lock(_queueMutex);
+//        _queue.emplace(frame);
+//    }
+//
+//    int poll(void **frames, int oldSize, int maxSize) {
+//        // Release old frames.
+//        if (oldSize > 0) {
+//            auto f = frames;
+//            for (int i = 0; i < oldSize; i++) {
+//                auto encoder = ((PiAudioFrame *) (*f))->encoder;
+//                if (encoder) {
+//                    ((PiEncoder *) encoder)->onHeartbeat();
+//                }
+//                f++;
+//            }
+//        }
+//
+//        auto start = high_resolution_now();
+//
+//        std::unique_lock<std::mutex> lock(_queueMutex);
+//
+//        auto lockedAt = high_resolution_now();
+//
+//        // Notify.
+//        _condition.wait(lock,
+//                        [this] { return _stop || !_queue.empty(); });
+//
+//        auto notifiedAt = high_resolution_now();
+//
+//        // Add wait nanos.
+//        _waitNanos += notifiedAt - lockedAt;
+//        // Increment count.
+//        _count++;
+//
+//        if (_stop && _queue.empty()) {
+//            return 0;
+//        }
+//
+//        int size = 0;
+//        while (size <= PI_MAX_AUDIO_FRAMES && !_queue.empty()) {
+//            auto msg = _queue.front();
+//            *frames = (void *) msg;
+//            frames++;
+//            size++;
+//            _queue.pop();
+//        }
+//
+//        _lastPoll = high_resolution_now();
+//        return size;
+//    }
+//
+////    void setHandler(PiAudioFrameHandler *handler) {
+////        std::unique_lock<std::mutex> lock(_queueMutex);
+////        _handler = handler;
+////    }
+//
+//private:
+//    void onFrames(void **frames, int16_t size) {
+////        if (_handler) {
+////            _handler->onFrames(frames, size);
+////        }
+//    }
+//
+////    void run() {
+////        std::vector<PiAudioFrame *> framesVec(PI_MAX_AUDIO_FRAMES);
+////        framesVec.clear();
+////        PiAudioFrameHandler *handler;
+////
+////        for (;;) {
+////            {
+////                int16_t size = 0;
+////
+////                auto start = high_resolution_now();
+////                {
+////                    std::unique_lock<std::mutex> lock(_queueMutex);
+////                    _condition.wait(lock,
+////                                    [this] { return _stop || !_queue.empty(); });
+////
+////                    auto end = high_resolution_now();
+////                    auto waitedFor = start - end;
+////
+////                    if (_stop && _queue.empty())
+////                        return;
+////
+////                    handler = _handler;
+////
+////                    while (size <= PI_MAX_AUDIO_FRAMES && !_queue.empty()) {
+////                        size++;
+////                        auto msg = _queue.front();
+////                        framesVec.push_back(msg);
+////                        _queue.pop();
+////                    }
+////                }
+////
+////                if (handler) {
+////                    start = high_resolution_now();
+////                    try {
+////                        handler->onFrames((void **) framesVec.data(), size);
+////                    } catch (...) {
+////                        // Ignore.
+////                    }
+////                    auto end = high_resolution_now();
+////                }
+////
+////                for (auto &f : framesVec) {
+////                    f->processed = true;
+////                }
+////
+////                std::unique_lock<std::mutex> lock(_queueMutex);
+////
+////                // Notify.
+////                for (auto &msg : framesVec) {
+////                    if (msg->encoder) {
+////                        ((PiEncoder *) msg->encoder)->isSilent();
+////                    }
+////                }
+////
+////                framesVec.clear();
+////            }
+////        }
+////    }
+//
+//private:
+//    std::thread _thread;
+//    uint64_t _count;
+//    uint64_t _lastPoll;
+//    uint64_t _waitNanos;
+//    std::mutex _queueMutex;
+//    std::condition_variable _condition;
+//    std::queue<PiAudioFrame *> _queue;
+//    bool _stop;
+////    PiAudioFrameHandler *_handler;
+//};
 
 /**
  * ThreadPool
@@ -281,7 +446,8 @@ void PiEncoder::create() PJSUA2_THROW(Error) {
     int err;
     _encoder = opus_encoder_create((int) _masterInfo.clock_rate, 1, OPUS_APPLICATION_VOIP, &err);
     opus_encoder_ctl(_encoder, OPUS_SET_DTX(true));
-    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(_masterInfo.clock_rate));
+//    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(_masterInfo.clock_rate));
+    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(20000));
 //    opus_encoder_ctl(encoder, OPUS_SET_INBAND_FEC(1));
 //    opus_encoder_ctl(encoder, OPUS_SET_PACKET_LOSS_PERC(1));
     opus_encoder_ctl(_encoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_MEDIUMBAND));
@@ -289,13 +455,13 @@ void PiEncoder::create() PJSUA2_THROW(Error) {
     // Setup VAD.
     _vad = fvad_new();
     fvad_set_sample_rate(_vad, (int) _masterInfo.clock_rate);
-    fvad_set_mode(_vad, mVadMode);
+    fvad_set_mode(_vad, _vadMode);
 
     PJSUA2_CHECK_RAISE_ERROR(status);
 
     registerMediaPort(&_base);
 
-    _frames = std::make_unique<PiAudioFrameBuffer>((uint16_t)id, historyFrames, _masterInfo.samples_per_frame);
+    _frames = std::make_unique<PiAudioFrameBuffer>((void *)this, (uint16_t) id, historyFrames, _masterInfo.samples_per_frame);
 }
 
 PiEncoderStats PiEncoder::reset() {
@@ -400,12 +566,13 @@ inline void PiEncoder::workerEncode(PiAudioFrame *frame) {
             PI_AUDIO_FRAME_MAX_OPUS_BYTES
     );
     auto externalStart = high_resolution_now();
-    frame->opus_cpu += (externalStart - start);
+    frame->opus_cpu = (externalStart - start);
 
 //    int dtxState;
 //    auto err = opus_encoder_ctl(mEncoder, OPUS_GET_IN_DTX(&dtxState));
 
     frame->processed = true;
+    frame->dtx = false;
 
     // Call into
     onFrame(
@@ -421,6 +588,7 @@ inline void PiEncoder::workerEncode(PiAudioFrame *frame) {
 inline void PiEncoder::workerEncodeDTX(PiAudioFrame *frame) {
     auto start = high_resolution_now();
     frame->processed = true;
+    frame->dtx = true;
 
     // Call into
     onFrame(
@@ -472,57 +640,70 @@ inline void PiEncoder::workerRun() {
 
 //    if (_dtx) {}
     // Silence?
-    if (!_vadState) {
-        if (!_inDtx) {
-            // Encode frame.
-            workerEncode(frame);
-
-            _stats.frameCount++;
-            _totalFrames++;
-            _inDtx = true;
-        } else {
-            frame->dtx = true;
-
-            // Skip OPUS.
-            _stats.dtxFramesSkipped++;
-
-            // Flush delayed frame.
-            auto flushFrame = _frames->back(_dtxRewind);
-            if (flushFrame && !flushFrame->processed) {
-                workerEncodeDTX(flushFrame);
-            }
-
-            // Invoke latest DTX
-//            encode(frame);
-            workerDTX(frame);
-        }
-    } else {
-        if (_inDtx) {
-            _inDtx = false;
-
-            // VAD signal lags a little behind.
-            for (int i = _dtxRewind; i > 0; i--) {
-                auto f = _frames->back(i);
-                if (!f || f->processed) continue;
-                _stats.dtxFramesSkipped--;
-                workerEncode(f);
-//                if (mOpusResult == 1) {
-//                    mStats.dtxFramesMissed++;
-//                }
-            }
-        }
-
-        workerEncode(frame);
-        _stats.frameCount++;
-        _totalFrames++;
-    }
+//    if (!_vadState) {
+//        if (!_inDtx) {
+//            // Encode frame.
+//            workerEncode(frame);
+//
+//            _stats.frameCount++;
+//            _totalFrames++;
+//            _inDtx = true;
+//        } else {
+//            frame->dtx = true;
+//
+//            // Skip OPUS.
+//            _stats.dtxFramesSkipped++;
+//
+//            // Flush delayed frame.
+//            auto flushFrame = _frames->back(_dtxRewind);
+//            if (flushFrame && !flushFrame->processed) {
+//                workerEncodeDTX(flushFrame);
+//            }
+//
+//            // Invoke latest DTX
+////            encode(frame);
+//            workerDTX(frame);
+//        }
+//    } else {
+//        if (_inDtx) {
+//            _inDtx = false;
+//
+//            // VAD signal lags a little behind.
+//            for (int i = _dtxRewind; i > 0; i--) {
+//                auto f = _frames->back(i);
+//                if (!f || f->processed) continue;
+//                _stats.dtxFramesSkipped--;
+//                workerEncode(f);
+//
+////                if (mOpusResult == 1) {
+////                    mStats.dtxFramesMissed++;
+////                }
+//            }
+//        }
+//
+//        workerEncode(frame);
+//        _stats.frameCount++;
+//        _totalFrames++;
+//    }
+    workerEncode(frame);
+    _stats.frameCount++;
+    _totalFrames++;
 
     // Flip encoding flag.
     _isEncoding = false;
     // Manual unlocking is done before notifying, to avoid waking up
     // the waiting thread only to block again (see notify_one for details)
     lock.unlock();
+
     _condition.notify_one();
+}
+
+int PiEncoder::encoderThreads() {
+    return PiWorkerPool::get()->numWorkers();
+}
+
+void PiEncoder::addEncoderThreads(int count) {
+    PiWorkerPool::get()->addWorkers(count);
 }
 
 
@@ -598,10 +779,3 @@ pj_status_t PiPlayer::on_destroy(pjmedia_port *this_port) {
     return PJ_SUCCESS;
 }
 
-int PiEncoder::encoderThreads() {
-    return PiWorkerPool::get()->numWorkers();
-}
-
-void PiEncoder::addEncoderThreads(int count) {
-    PiWorkerPool::get()->addWorkers(count);
-}

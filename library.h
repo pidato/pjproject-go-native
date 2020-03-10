@@ -22,6 +22,8 @@ using namespace pj;
 const int PI_AUDIO_FRAME_MAX_PCM_BYTES = 640;
 const int PI_AUDIO_FRAME_MAX_OPUS_BYTES = 1328;
 
+
+
 struct PiAudioFrame {
     void *encoder;
     uint64_t enqueuedAt;
@@ -42,14 +44,12 @@ struct PiAudioFrame {
     uint8_t opus[PI_AUDIO_FRAME_MAX_OPUS_BYTES];
 };
 
-static inline int64_t high_resolution_now();
-
 /**
  *
  */
 class PiAudioFrameBuffer {
 public:
-    PiAudioFrameBuffer(int port, unsigned frames, unsigned samplesPerFrame);
+    PiAudioFrameBuffer(void *encoder, int port, unsigned frames, unsigned samplesPerFrame);
 
     ~PiAudioFrameBuffer();
 
@@ -105,6 +105,13 @@ struct PiEncoderStats {
     pj_uint64_t totalEncoderWaitNanos;
 };
 
+//class PiAudioFrameHandler {
+//public:
+//    virtual void onFrames(void **frames, int16_t size) {
+//
+//    }
+//};
+
 /**
  * Encodes raw PCM to Opus with using WebRTC Voice Activity Detection to minimize
  * Opus encoder CPU cycles by a hybrid form of DTX (discontinuous transmission).
@@ -155,7 +162,7 @@ public:
      *
      * @return
      */
-    int getVadMode() { return mVadMode; }
+    int getVadMode() { return _vadMode; }
 
     /**
      *
@@ -215,7 +222,7 @@ public:
      * @param prevExternCPU
      */
     virtual void onFrameDTX(
-            PiAudioFrame *frame,
+            void *frame,
             pj_uint64_t prevExternCPU
     ) {}
 
@@ -231,7 +238,7 @@ public:
      * @param opusResult positive value is numWorkers in opus_buf; otherwise opus error code
      */
     virtual void onFrame(
-            PiAudioFrame *frame,
+            void *frame,
             pj_uint64_t prevExternCPU
     ) {}
 
@@ -256,7 +263,7 @@ private:
 
     OpusEncoder *_encoder;
     Fvad *_vad;
-    int mVadMode;
+    int _vadMode;
     int _vadState;
     uint32_t _cycle;
 
@@ -266,6 +273,8 @@ private:
     PiEncoderStats _stats;
 
     uint64_t _totalFrames;
+
+    void onProcessed(PiAudioFrame *frame);
 
     void doPutFrame(pjmedia_frame *frame);
 
@@ -356,120 +365,6 @@ private:
                                     pjmedia_frame *frame);
 
     static pj_status_t on_destroy(pjmedia_port *this_port);
-};
-
-
-struct PiAudioFrames {
-    PiAudioFrame **frames;
-    int16_t size;
-    bool stop;
-};
-
-
-static const int PI_MAX_AUDIO_FRAMES = 4096;
-
-class PiAudioFrameNotifier {
-public:
-    PiAudioFrameNotifier() {
-        _frames.size = 0;
-        _frames.stop = false;
-    }
-
-    ~PiAudioFrameNotifier() {
-        std::unique_lock<std::mutex> lock(_queueMutex);
-        _stop = true;
-    }
-
-    void enqueue(PiAudioFrame *frame) {
-        std::unique_lock<std::mutex> lock(_queueMutex);
-        _queue.emplace(frame);
-    }
-
-    PiAudioFrames poll() {
-        std::vector<PiAudioFrame *> framesVec(PI_MAX_AUDIO_FRAMES);
-        auto frames = PiAudioFrames();
-
-        std::unique_lock<std::mutex> lock(_queueMutex);
-
-        // Notify.
-        _condition.wait(lock,
-                        [this] { return _stop || !_queue.empty(); });
-
-        _count++;
-
-        if (_stop && _queue.empty()) {
-            frames.stop = true;
-            return frames;
-        }
-
-        while (frames.size <= PI_MAX_AUDIO_FRAMES) {
-
-        }
-
-        return frames;
-    }
-
-    virtual void onFrames(PiAudioFrame **frames, int16_t size) {
-
-    }
-
-private:
-    void run() {
-        std::vector<PiAudioFrame *> framesVec(PI_MAX_AUDIO_FRAMES);
-
-        for (;;) {
-            {
-                int16_t size = 0;
-
-                auto start = high_resolution_now();
-                {
-                    std::unique_lock<std::mutex> lock(_queueMutex);
-                    _condition.wait(lock,
-                                    [this] { return _stop || !_queue.empty(); });
-
-                    auto end = high_resolution_now();
-                    auto waitedFor = start - end;
-
-                    if (_stop && _queue.empty())
-                        return;
-
-                    while (size <= PI_MAX_AUDIO_FRAMES && !_queue.empty()) {
-                        size++;
-                        auto msg = _queue.front();
-                        framesVec.push_back(msg);
-                        _queue.pop();
-                    }
-                }
-
-                start = high_resolution_now();
-                try {
-                    this->onFrames(framesVec.data(), size);
-                } catch (...) {
-                    // Ignore.
-                }
-                auto end = high_resolution_now();
-
-                std::unique_lock<std::mutex> lock(_queueMutex);
-
-                // Notify.
-                for (auto &msg : framesVec) {
-                    if (msg->encoder) {
-                        ((PiEncoder *) msg->encoder)->isSilent();
-                    }
-                }
-
-                framesVec.clear();
-            }
-        }
-    }
-
-private:
-    PiAudioFrames _frames;
-    uint64_t _count;
-    std::mutex _queueMutex;
-    std::condition_variable _condition;
-    std::queue<PiAudioFrame *> _queue;
-    bool _stop;
 };
 
 

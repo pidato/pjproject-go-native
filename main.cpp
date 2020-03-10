@@ -15,13 +15,15 @@ using namespace std;
 
 class Pi2Port : public PiEncoder {
 public:
-    inline void onFrameDTX(PiAudioFrame *frame, pj_uint64_t prevExternCPU) override {
+    inline void onFrameDTX(void *_frame, pj_uint64_t prevExternCPU) override {
+        auto frame = (PiAudioFrame*)_frame;
         total_extern_cpu += prevExternCPU;
         total_extern_count++;
     }
 
     inline void
-    onFrame(PiAudioFrame *frame, pj_uint64_t prevExternCPU) override {
+    onFrame(void *_frame, pj_uint64_t prevExternCPU) override {
+        auto frame = (PiAudioFrame*)_frame;
 
         if (frame->frame_num != next_frame) {
             cout << endl;

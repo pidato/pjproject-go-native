@@ -12,23 +12,22 @@
 
 #define THIS_FILE "library.cpp"
 
-
 #define PJ2BOOL(var) ((var) != PJ_FALSE)
 
 using std::string;
 
-inline pj_str_t str2Pj(const string &input_str) {
-    pj_str_t output_str;
-    output_str.ptr = (char *) input_str.c_str();
-    output_str.slen = input_str.size();
-    return output_str;
-}
-
-inline string pj2Str(const pj_str_t &input_str) {
-    if (input_str.ptr && input_str.slen > 0)
-        return string(input_str.ptr, input_str.slen);
-    return string();
-}
+//static inline pj_str_t str2Pj(const string &input_str) {
+//    pj_str_t output_str;
+//    output_str.ptr = (char *) input_str.c_str();
+//    output_str.slen = input_str.size();
+//    return output_str;
+//}
+//
+//static inline string pj2Str(const pj_str_t &input_str) {
+//    if (input_str.ptr && input_str.slen > 0)
+//        return string(input_str.ptr, input_str.slen);
+//    return string();
+//}
 
 static inline int64_t high_resolution_now() {
     return std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -53,7 +52,7 @@ PiAudioFrameBuffer::PiAudioFrameBuffer(void *encoder, int port, unsigned frames,
 PiAudioFrameBuffer::~PiAudioFrameBuffer() {
 }
 
-PiAudioFrame *PiAudioFrameBuffer::operator[](int index) {
+PiAudioFrame *PiAudioFrameBuffer::operator[](size_t index) {
     if (index < 0) return nullptr;
     if (_size == 0) return nullptr;
     if (index >= _size) return nullptr;
@@ -109,14 +108,14 @@ PiAudioFrame *PiAudioFrameBuffer::tail() {
     return &_ring[_tail % _ring.size()];
 }
 
-PiAudioFrame *PiAudioFrameBuffer::get(int index) {
+PiAudioFrame *PiAudioFrameBuffer::get(size_t index) {
     if (index < 0) return nullptr;
     if (_size == 0) return nullptr;
     if (index >= _size) return nullptr;
     return &_ring[(_head + index) % _ring.size()];
 }
 
-PiAudioFrame *PiAudioFrameBuffer::back(int count) {
+PiAudioFrame *PiAudioFrameBuffer::back(size_t count) {
     return get(_size - count - 1);
 }
 
@@ -512,6 +511,9 @@ PiEncoderStats PiRecorder::reset() {
 
     if (_encoder != nullptr) {
         auto err = opus_encoder_init(_encoder, _masterInfo.clock_rate, 1, OPUS_APPLICATION_VOIP);
+        if (err) {
+
+        }
 //        err = opus_encoder_ctl(mEncoder, OPUS_SET_INBAND_FEC(fec));
 //        if (packetLossPct > -1) {
 //            err = opus_encoder_ctl(mEncoder, OPUS_SET_PACKET_LOSS_PERC(fec));

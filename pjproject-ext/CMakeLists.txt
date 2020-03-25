@@ -11,6 +11,7 @@ project(pj-ext)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 get_filename_component(PARENT_DIR ../ ABSOLUTE)
+message("Parent Dir: ${PARENT_DIR}")
 
 include_directories(${PARENT_DIR}/include)
 
@@ -48,7 +49,9 @@ set(CMAKE_CXX_FLAGS "-Wall -fPIC")
 set(CMAKE_CXX_STANDARD 17)
 
 add_library(pj-ext pj-ext.cpp pj-ext.h)
-add_executable(example pj-ext.h pj-ext.cpp main.cpp)
+if (APPLE)
+    add_executable(example pj-ext.h pj-ext.cpp main.cpp)
+endif (APPLE)
 set_property(TARGET pj-ext PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 if (APPLE)
@@ -101,40 +104,40 @@ ELSEIF (UNIX)
             pthread
             )
 
-    target_link_libraries(example
-            uuid
-            asound
-            dl
-            m
-            pthread
-            
-            opencore-amrnb
-            fvad
-            opus
-            ssl
-            crypto
-
-            pjsip
-            pjsip-ua
-            pjsip-simple
-            pj
-            pjmedia
-            pjmedia-codec
-            pjmedia-audiodev
-            pjmedia-videodev
-            pjnath
-            pjlib-util
-            srtp
-            resample
-            gsm
-            speex
-            ilbccodec
-            g7221
-            webrtc
-            yuv
-            pjsua
-            pjsua2
-            )
+#    target_link_libraries(example
+#            uuid
+#            asound
+#            dl
+#            m
+#            pthread
+#
+#            opencore-amrnb
+#            fvad
+#            opus
+#            ssl
+#            crypto
+#
+#            pjsip
+#            pjsip-ua
+#            pjsip-simple
+#            pj
+#            pjmedia
+#            pjmedia-codec
+#            pjmedia-audiodev
+#            pjmedia-videodev
+#            pjnath
+#            pjlib-util
+#            srtp
+#            resample
+#            gsm
+#            speex
+#            ilbccodec
+#            g7221
+#            webrtc
+#            yuv
+#            pjsua
+#            pjsua2
+#            )
     #    target_link_libraries(pidato
     #            uuid
     #            pthread

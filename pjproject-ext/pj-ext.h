@@ -53,7 +53,7 @@ public:
 
     ~PiAudioFrameBuffer();
 
-    PiAudioFrame *operator[](int index);
+    PiAudioFrame *operator[](size_t index);
 
     size_t bufferSize() { return _bufSize; }
 
@@ -74,9 +74,9 @@ public:
 
     PiAudioFrame *tail();
 
-    PiAudioFrame *get(int index);
+    PiAudioFrame *get(size_t index);
 
-    PiAudioFrame *back(int count);
+    PiAudioFrame *back(size_t count);
 
 private:
     std::vector<PiAudioFrame> _ring;
@@ -85,7 +85,7 @@ private:
     int64_t _count;
     int64_t _head;
     int64_t _tail;
-    int _size;
+    size_t _size;
 };
 
 /**

@@ -33,6 +33,9 @@ Makefile.in
 # Dependency directories (remove the comment below to include it)
 # vendor/
 .idea
+
+include
+
 pjproject/*.mak
 pjproject/*.log
 pjproject/*.status

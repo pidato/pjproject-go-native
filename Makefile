@@ -11,16 +11,18 @@ PJPROJECT_CONFIGURE=
 
 ifeq ($(UNAME_S),Linux)
 	UNAME_I = $(shell uname -i)
-	PLATFORM_SUFFIX = $(UNAME_M)-$(UNAME_I)-linux-gnu
+	PLATFORM_SUFFIX = $(UNAME_M)-unknown-linux-gnu
 	PJPROJECT_CONFIGURE=\
 ./configure \
 --enable-epoll \
 --enable-shared \
+--disable-sound \
+--disable-video \
 --with-opencore-amr=$(OPENCORE_AMR_DIR) \
 --with-opus=$(OPUS_DIR) \
 --with-ssl=$(SSL_DIR) \
 CXXFLAGS="-std=c++17 $(DEFAULT_CXXFLAGS)" \
-CFLAGS="$(DEFAULT_CXXFLAGS) -DPJSUA_MAX_CALLS=256 -DPJMEDIA_CODEC_L16_HAS_16KHZ_MONO"
+CFLAGS="$(DEFAULT_CXXFLAGS) -DPJSUA_MAX_CALLS=256 -DPJMEDIA_CODEC_L16_HAS_16KHZ_MONO -ldl -lm -luuid"
 endif
 ifeq ($(UNAME_S),Darwin)
 	UNAME_R := $(shell uname -r)
@@ -204,7 +206,7 @@ move-libs:
 	cp ./pjproject/pjmedia/lib/libpjmedia-$(PLATFORM_SUFFIX).a ./libs/pjmedia/libpjmedia.a
 	cp ./pjproject/pjmedia/lib/libpjmedia-codec-$(PLATFORM_SUFFIX).a ./libs/pjmedia-codec/libpjmedia-codec.a
 	cp ./pjproject/pjmedia/lib/libpjmedia-audiodev-$(PLATFORM_SUFFIX).a ./libs/pjmedia-audiodev/libpjmedia-audiodev.a
-	cp ./pjproject/pjmedia/lib/libpjmedia-videodev-$(PLATFORM_SUFFIX).a ./libs/pjmedia-videodev/libpjmedia-videodev.a
+	# cp ./pjproject/pjmedia/lib/libpjmedia-videodev-$(PLATFORM_SUFFIX).a ./libs/pjmedia-videodev/libpjmedia-videodev.a
 	cp ./pjproject/pjnath/lib/libpjnath-$(PLATFORM_SUFFIX).a ./libs/pjnath/libpjnath.a
 	cp ./pjproject/pjlib-util/lib/libpjlib-util-$(PLATFORM_SUFFIX).a ./libs/pjlib-util/libpjlib-util.a
 	cp ./pjproject/third_party/lib/libsrtp-$(PLATFORM_SUFFIX).a ./libs/srtp/libsrtp.a
@@ -214,12 +216,13 @@ move-libs:
 	cp ./pjproject/third_party/lib/libilbccodec-$(PLATFORM_SUFFIX).a ./libs/libilbccodec/libilbccodec.a
 	cp ./pjproject/third_party/lib/libg7221codec-$(PLATFORM_SUFFIX).a ./libs/g7221/libg7221.a
 	cp ./pjproject/third_party/lib/libwebrtc-$(PLATFORM_SUFFIX).a ./libs/webrtc/libwebrtc.a
-	cp ./pjproject/third_party/lib/libyuv-$(PLATFORM_SUFFIX).a ./libs/yuv/libyuv.a
+	# cp ./pjproject/third_party/lib/libyuv-$(PLATFORM_SUFFIX).a ./libs/yuv/libyuv.a
 	cp ./pjproject/pjsip/lib/libpjsua-$(PLATFORM_SUFFIX).a ./libs/pjsua/libpjsua.a
 	cp ./pjproject/pjsip/lib/libpjsua2-$(PLATFORM_SUFFIX).a ./libs/pjsua2/libpjsua2.a
 
 assemble:
-	cp pjproject-ext/build/libpj-ext.a ./libs/pj-ext/libpj-ext.a
+	- cp pjproject-ext/build/libpj-ext.a ./libs/pj-ext/libpj-ext.a
+	- cp pjproject-ext/libpj-ext.a ./libs/pj-ext/libpj-ext.a
 	cd libs/fvad; ar -x libfvad.a
 	cd libs/opus; ar -x libopus.a
 	cd libs/ssl; ar -x libssl.a
@@ -231,7 +234,7 @@ assemble:
 	cd libs/pjmedia; ar -x libpjmedia.a
 	cd libs/pjmedia-codec; ar -x libpjmedia-codec.a
 	cd libs/pjmedia-audiodev; ar -x libpjmedia-audiodev.a
-	cd libs/pjmedia-videodev; ar -x libpjmedia-videodev.a
+	# cd libs/pjmedia-videodev; ar -x libpjmedia-videodev.a
 	cd libs/pjnath; ar -x libpjnath.a
 	cd libs/pjlib-util; ar -x libpjlib-util.a
 	cd libs/srtp; ar -x libsrtp.a
@@ -241,13 +244,13 @@ assemble:
 	cd libs/libilbccodec; ar -x libilbccodec.a
 	cd libs/g7221; ar -x libg7221.a
 	cd libs/webrtc; ar -x libwebrtc.a
-	cd libs/yuv; ar -x libyuv.a
+	# cd libs/yuv; ar -x libyuv.a
 	cd libs/pjsua; ar -x libpjsua.a
 	cd libs/pjsua2; ar -x libpjsua2.a
 	cd libs/pj-ext; ar -x libpj-ext.a
 	cd libs/amrnb; ar -x libopencore-amrnb.a
 	- rm libs/srtp/aes_icm.o
-	cd libs; ar -q libpjproject-2.10.a fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-videodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o yuv/*.o pjsua/*.o pjsua2/*.o amrnb/*.o pj-ext/*.o
+	cd libs; ar -q libpjproject-2.10.a fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o pjsua/*.o pjsua2/*.o amrnb/*.o pj-ext/*.o
 
 print:
 	@ echo "PLATFORM SUFFIX = $(PLATFORM_SUFFIX)"

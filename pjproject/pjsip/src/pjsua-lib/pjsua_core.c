@@ -892,11 +892,15 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 {
     pj_status_t status;
 
+    pjsua_logging_config log_cfg = pjsua_var.log_cfg;
+
     /* Init pjsua data */
     init_data();
 
+    pjsua_var.log_cfg = log_cfg;
+
     /* Set default logging settings */
-    pjsua_logging_config_default(&pjsua_var.log_cfg);
+//    pjsua_logging_config_default(&pjsua_var.log_cfg);
 
     /* Init PJLIB: */
     status = pj_init();

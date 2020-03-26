@@ -19,6 +19,7 @@ ifeq ($(UNAME_S),Linux)
 --enable-epoll \
 --disable-sound \
 --disable-video \
+--disable-opencore-amr \
 --with-opus=$(OPUS_DIR) \
 --with-ssl=$(SSL_DIR) \
 CXXFLAGS="-std=c++17 $(DEFAULT_CXXFLAGS)" \
@@ -32,6 +33,7 @@ ifeq ($(UNAME_S),Darwin)
 ./configure \
 --disable-sound \
 --disable-video \
+--disable-opencore-amr \
 --with-opus=$(OPUS_DIR) \
 --with-ssl=$(SSL_DIR) \
 CXXFLAGS="-std=c++17 $(DEFAULT_CXXFLAGS)" \
@@ -45,19 +47,19 @@ debug: clean debug-configure debug-dep build-ext assemble
 
 ext: build-deps build-ext assemble
 
-dep: build-opencore build-fvad build-opus build-ssl build-pjproject move-include move-libs
+dep: build-fvad build-opus build-ssl build-pjproject move-include move-libs
 debug-dep: DEFAULT_CFLAGS += -DDEBUG -g
 debug-dep: DEFAULT_CXXFLAGS += -DDEBUG -g
 debug-dep: dep
 
-configure: configure-opencore configure-fvad configure-opus configure-ssl configure-pjproject
+configure: configure-fvad configure-opus configure-ssl configure-pjproject
 debug-configure: DEFAULT_CFLAGS += -DDEBUG -g
 debug-configure: DEFAULT_CXXFLAGS += -DDEBUG -g
 debug-configure: configure
 
-clean: clean-libs clean-include clean-opencore clean-fvad clean-opus clean-ssl clean-pjproject
+clean: clean-libs clean-include clean-fvad clean-opus clean-ssl clean-pjproject
 
-build-deps: build-opencore build-fvad build-opus build-ssl build-pj move-include move-libs
+build-deps: build-fvad build-opus build-ssl build-pj move-include move-libs
 
 clean-pjproject:
 	- cd pjproject; $(MAKE) clean
@@ -171,7 +173,7 @@ move-libs:
 	- mkdir libs/opus
 	- mkdir libs/ssl
 	- mkdir libs/crypto
-	- mkdir libs/amrnb
+# 	- mkdir libs/amrnb
 	- mkdir libs/pj
 	- mkdir libs/pjsip
 	- mkdir libs/pjsip-ua
@@ -199,7 +201,7 @@ move-libs:
 	cp ./fvad/src/.libs/libfvad.a ./libs/libfvad.a
 	cp ./openssl/libssl.a ./libs/ssl/libssl.a
 	cp ./openssl/libcrypto.a ./libs/crypto/libcrypto.a
-	cp ./opencore-amr/amrnb/.libs/libopencore-amrnb.a ./libs/amrnb/libopencore-amrnb.a
+# 	cp ./opencore-amr/amrnb/.libs/libopencore-amrnb.a ./libs/amrnb/libopencore-amrnb.a
 	cp ./pjproject/pjsip/lib/libpjsip-$(PLATFORM_SUFFIX).a ./libs/pjsip/libpjsip.a
 	cp ./pjproject/pjsip/lib/libpjsip-ua-$(PLATFORM_SUFFIX).a ./libs/pjsip-ua/libpjsip-ua.a
 	cp ./pjproject/pjsip/lib/libpjsip-simple-$(PLATFORM_SUFFIX).a ./libs/pjsip-simple/libpjsip-simple.a
@@ -248,8 +250,8 @@ assemble:
 	cd libs/pjsua; ar -x libpjsua.a
 	cd libs/pjsua2; ar -x libpjsua2.a
 	cd libs/pj-ext; ar -x libpj-ext.a
-	cd libs/amrnb; ar -x libopencore-amrnb.a
-	cd libs; ar -q libpjproject-2.10.a fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o pjsua/*.o pjsua2/*.o amrnb/*.o pj-ext/*.o
+# 	cd libs/amrnb; ar -x libopencore-amrnb.a
+	cd libs; ar -q libpjproject-2.10.a fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o pjsua/*.o pjsua2/*.o pj-ext/*.o
 
 print:
 	@ echo "PLATFORM SUFFIX = $(PLATFORM_SUFFIX)"

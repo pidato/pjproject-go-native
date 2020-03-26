@@ -444,7 +444,7 @@ void PiRecorder::create() PJSUA2_THROW(Error) {
     status = pjsua_conf_get_port_info(0, &_masterInfo);
     PJSUA2_CHECK_RAISE_ERROR(status);
 
-    pj_str_t name = pj_str((char *) "pi_encoder");
+    pj_str_t name = pj_str((char *) "pi_recorder");
     status = pjmedia_port_info_init(
             &_base.info,
             &name,

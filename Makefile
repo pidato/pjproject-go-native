@@ -7,30 +7,31 @@ UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 DEFAULT_CXXFLAGS=-fPIC -O3
 DEFAULT_CFLAGS=-fPIC -O3
+ASSEMBLE_EXTRA=
 PJPROJECT_CONFIGURE=
 
 ifeq ($(UNAME_S),Linux)
 	UNAME_I = $(shell uname -i)
 	PLATFORM_SUFFIX = $(UNAME_M)-unknown-linux-gnu
+	ASSEMBLE_EXTRA=
 	PJPROJECT_CONFIGURE=\
 ./configure \
 --enable-epoll \
---enable-shared \
 --disable-sound \
 --disable-video \
---with-opencore-amr=$(OPENCORE_AMR_DIR) \
 --with-opus=$(OPUS_DIR) \
 --with-ssl=$(SSL_DIR) \
 CXXFLAGS="-std=c++17 $(DEFAULT_CXXFLAGS)" \
-CFLAGS="$(DEFAULT_CXXFLAGS) -DPJSUA_MAX_CALLS=256 -DPJMEDIA_CODEC_L16_HAS_16KHZ_MONO -ldl -lm -luuid"
+CFLAGS="$(DEFAULT_CXXFLAGS) -DPJSUA_MAX_CALLS=256 -DPJMEDIA_CODEC_L16_HAS_16KHZ_MONO"
 endif
 ifeq ($(UNAME_S),Darwin)
 	UNAME_R := $(shell uname -r)
 	PLATFORM_SUFFIX=$(UNAME_M)-apple-darwin$(UNAME_R)
+	ASSEMBLE_EXTRA=- rm libs/srtp/aes_icm.o
 	PJPROJECT_CONFIGURE=\
 ./configure \
---enable-shared \
---with-opencore-amr=$(OPENCORE_AMR_DIR) \
+--disable-sound \
+--disable-video \
 --with-opus=$(OPUS_DIR) \
 --with-ssl=$(SSL_DIR) \
 CXXFLAGS="-std=c++17 $(DEFAULT_CXXFLAGS)" \
@@ -222,7 +223,6 @@ move-libs:
 
 assemble:
 	- cp pjproject-ext/build/libpj-ext.a ./libs/pj-ext/libpj-ext.a
-	- cp pjproject-ext/libpj-ext.a ./libs/pj-ext/libpj-ext.a
 	cd libs/fvad; ar -x libfvad.a
 	cd libs/opus; ar -x libopus.a
 	cd libs/ssl; ar -x libssl.a
@@ -249,7 +249,6 @@ assemble:
 	cd libs/pjsua2; ar -x libpjsua2.a
 	cd libs/pj-ext; ar -x libpj-ext.a
 	cd libs/amrnb; ar -x libopencore-amrnb.a
-	- rm libs/srtp/aes_icm.o
 	cd libs; ar -q libpjproject-2.10.a fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o pjsua/*.o pjsua2/*.o amrnb/*.o pj-ext/*.o
 
 print:

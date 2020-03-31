@@ -22,8 +22,6 @@ using namespace pj;
 const int PI_AUDIO_FRAME_MAX_PCM_BYTES = 640;
 const int PI_AUDIO_FRAME_MAX_OPUS_BYTES = 1328;
 
-
-
 struct PiAudioFrame {
     void *encoder;
     uint64_t enqueuedAt;
@@ -55,13 +53,13 @@ public:
 
     PiAudioFrame *operator[](size_t index);
 
-    size_t bufferSize() { return _bufSize; }
+    size_t bufferSize() { return buf_size_; }
 
-    size_t samplesPerFrame() { return _samplesPerFrame; }
+    size_t samplesPerFrame() { return samples_per_frame_; }
 
-    int size() { return _size; }
+    int size() { return size_; }
 
-    void clear() { _size = 0; }
+    void clear() { size_ = 0; }
 
     /**
      * memcpy the new tail position.
@@ -80,29 +78,29 @@ public:
 
 private:
     std::vector<PiAudioFrame> _ring;
-    int64_t _bufSize;
-    int64_t _samplesPerFrame;
-    int64_t _count;
-    int64_t _head;
-    int64_t _tail;
-    size_t _size;
+    long long buf_size_;
+    long long samples_per_frame_;
+    long long count_;
+    long long head_;
+    long long tail_;
+    size_t size_;
 };
 
 /**
  *
  */
 struct PiEncoderStats {
-    pj_uint64_t frameCount;
-    pj_uint64_t dtxFramesSkipped;
-    pj_uint64_t dtxFramesMissed;
-    pj_uint64_t totalVadCpu;
-    pj_uint64_t totalOpusCpu;
-    pj_uint64_t totalExternCpu;
-    pj_uint64_t lastExternCpu;
-    pj_uint64_t heartbeatCount;
-    pj_uint64_t totalHeartbeatCpu;
-    pj_uint64_t totalEnqueueNanos;
-    pj_uint64_t totalEncoderWaitNanos;
+    unsigned long long frameCount;
+    unsigned long long dtxFramesSkipped;
+    unsigned long long dtxFramesMissed;
+    unsigned long long totalVadCpu;
+    unsigned long long totalOpusCpu;
+    unsigned long long totalExternCpu;
+    unsigned long long lastExternCpu;
+    unsigned long long heartbeatCount;
+    unsigned long long totalHeartbeatCpu;
+    unsigned long long totalEnqueueNanos;
+    unsigned long long totalEncoderWaitNanos;
 };
 
 /**
@@ -124,27 +122,27 @@ public:
      *
      * @return
      */
-    unsigned getClockRate() { return _masterInfo.clock_rate; }
+    unsigned getClockRate() { return master_info_.clock_rate; }
 
     /**
      *
      * @return
      */
-    unsigned getChannelCount() { return _masterInfo.channel_count; }
+    unsigned getChannelCount() { return master_info_.channel_count; }
 
     /**
      *
      * @return
      */
-    unsigned getSamplesPerFrame() { return _masterInfo.samples_per_frame; }
+    unsigned getSamplesPerFrame() { return master_info_.samples_per_frame; }
 
-    unsigned getPtime() { return _ptime; }
+    unsigned getPtime() { return ptime_; }
 
-    unsigned getBitsPerSample() { return _masterInfo.bits_per_sample; }
+    unsigned getBitsPerSample() { return master_info_.bits_per_sample; }
 
-    float getTxLevelAdj() { return _masterInfo.tx_level_adj; }
+    float getTxLevelAdj() { return master_info_.tx_level_adj; }
 
-    float getRxLevelAdj() { return _masterInfo.rx_level_adj; }
+    float getRxLevelAdj() { return master_info_.rx_level_adj; }
 
     /**
      *
@@ -155,7 +153,7 @@ public:
      *
      * @return
      */
-    int getVadMode() { return _vadMode; }
+    int getVadMode() { return vad_mode_; }
 
     /**
      *
@@ -169,30 +167,30 @@ public:
      *                        0 - (non-active Voice),
      *                       -1 - (invalid frame length).
      */
-    int getVadState() { return _vadState; }
+    int getVadState() { return vad_state_; }
 
-    bool isVadError() { return _vadState == -1; }
+    bool isVadError() { return vad_state_ == -1; }
 
-    bool isSpeaking() { return _vadState == 1; }
+    bool isSpeaking() { return vad_state_ == 1; }
 
-    bool isSilent() { return _vadState != 1; }
+    bool isSilent() { return vad_state_ != 1; }
 
     /**
      * Returns a pointer to the OpusEncoder.
      *
      * @return
      */
-    void *getOpusEncoder() { return _encoder; }
+    void *getOpusEncoder() { return encoder_; }
 
-    PiEncoderStats getStats() { return _stats; }
+    PiEncoderStats getStats() { return stats_; }
 
-    pj_uint64_t getTotalVadCpu() { return _stats.totalVadCpu; }
+    unsigned long long getTotalVadCpu() { return stats_.totalVadCpu; }
 
-    pj_uint64_t getTotalOpusCpu() { return _stats.totalOpusCpu; }
+    unsigned long long getTotalOpusCpu() { return stats_.totalOpusCpu; }
 
-    pj_uint64_t getTotalExternCpu() { return _stats.totalExternCpu; }
+    unsigned long long getTotalExternCpu() { return stats_.totalExternCpu; }
 
-    pj_uint64_t getLastExternCpu() { return _stats.lastExternCpu; }
+    unsigned long long getLastExternCpu() { return stats_.lastExternCpu; }
 
     virtual void onHeartbeat() {}
 
@@ -244,28 +242,28 @@ public:
 protected:
 
 private:
-    std::mutex _mutex;
-    std::condition_variable _condition;
+    std::mutex mutex_;
+    std::condition_variable condition_;
 
-    bool _isEncoding;
-    int64_t _enqueuedAt;
+    bool is_encoding_;
+    long long enqueued_at_;
 
-    pjmedia_port _base;
-    pjsua_conf_port_info _masterInfo;
-    unsigned _ptime;
+    pjmedia_port base_;
+    pjsua_conf_port_info master_info_;
+    unsigned ptime_;
 
-    OpusEncoder *_encoder;
-    Fvad *_vad;
-    int _vadMode;
-    int _vadState;
-    uint32_t _cycle;
+    OpusEncoder *encoder_;
+    Fvad *vad_;
+    int vad_mode_;
+    int vad_state_;
+    unsigned int cycle_;
 
-    bool _inDtx;
-    int _dtxRewind; // Number of frames to rewind once VAD state moves to speech.
-    std::unique_ptr<PiAudioFrameBuffer> _frames;
-    PiEncoderStats _stats;
+    bool in_dtx_;
+    int dtx_rewind_; // Number of frames to rewind once VAD state moves to speech.
+    std::unique_ptr<PiAudioFrameBuffer> frames_;
+    PiEncoderStats stats_;
 
-    uint64_t _totalFrames;
+    unsigned long long total_frames_;
 
     void onProcessed(PiAudioFrame *frame);
 
@@ -342,9 +340,9 @@ public:
     virtual void onPutFrame(
             pjmedia_frame_type frameType,
             void *pcm,
-            pj_size_t size,
-            pj_uint64_t timestamp,
-            pj_uint32_t bit_info
+            size_t size,
+            unsigned long long timestamp,
+            unsigned int bit_info
     ) {}
 
     /**
@@ -359,9 +357,9 @@ public:
     virtual void onGetFrame(
             pjmedia_frame_type frameType,
             void *pcm,
-            pj_size_t size,
-            pj_uint64_t timestamp,
-            pj_uint32_t bit_info
+            size_t size,
+            unsigned long long timestamp,
+            unsigned int bit_info
     ) {}
 
     virtual void onDestroy() {}

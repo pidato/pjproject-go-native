@@ -35,12 +35,12 @@ static inline int64_t high_resolution_now() {
 
 PiAudioFrameBuffer::PiAudioFrameBuffer(void *encoder, int port, unsigned frames, unsigned samplesPerFrame) {
     _ring = std::vector<PiAudioFrame>(frames);
-    _bufSize = samplesPerFrame * 2; // Only 16bit PCM is supported.
-    _samplesPerFrame = samplesPerFrame;
-    _count = 0;
-    _size = 0;
-    _head = 0;
-    _tail = 0;
+    buf_size_ = samplesPerFrame * 2; // Only 16bit PCM is supported.
+    samples_per_frame_ = samplesPerFrame;
+    count_ = 0;
+    size_ = 0;
+    head_ = 0;
+    tail_ = 0;
 
     for (auto &frame : _ring) {
         frame.encoder = encoder;
@@ -54,9 +54,9 @@ PiAudioFrameBuffer::~PiAudioFrameBuffer() {
 
 PiAudioFrame *PiAudioFrameBuffer::operator[](size_t index) {
     if (index < 0) return nullptr;
-    if (_size == 0) return nullptr;
-    if (index >= _size) return nullptr;
-    return &_ring[(_head + index) % _ring.size()];
+    if (size_ == 0) return nullptr;
+    if (index >= size_) return nullptr;
+    return &_ring[(head_ + index) % _ring.size()];
 }
 
 int PiAudioFrameBuffer::push(uint32_t cycle, pjmedia_frame *frame, pj_uint64_t frameNum) {
@@ -64,18 +64,18 @@ int PiAudioFrameBuffer::push(uint32_t cycle, pjmedia_frame *frame, pj_uint64_t f
         return -1;
     }
 
-    if (_size == 0) {
-        _head = _count;
-        _size++;
+    if (size_ == 0) {
+        head_ = count_;
+        size_++;
     } else {
-        if (_size == _ring.size() - 1) {
-            _head++;
+        if (size_ == _ring.size() - 1) {
+            head_++;
         } else {
-            _size++;
+            size_++;
         }
     }
 
-    auto newFrame = &_ring[_count % _ring.size()];
+    auto newFrame = &_ring[count_ % _ring.size()];
     newFrame->enqueuedAt = 0;
     newFrame->processedCPU = 0;
     newFrame->cycle = cycle;
@@ -93,30 +93,30 @@ int PiAudioFrameBuffer::push(uint32_t cycle, pjmedia_frame *frame, pj_uint64_t f
     // Copy PCM.
     memcpy((void *) &newFrame->pcm, frame->buf, frame->size);
 
-    _tail = _count;
-    _count++;
+    tail_ = count_;
+    count_++;
     return 0;
 }
 
 PiAudioFrame *PiAudioFrameBuffer::head() {
-    if (_size == 0) return nullptr;
-    return &_ring[_head % _ring.size()];
+    if (size_ == 0) return nullptr;
+    return &_ring[head_ % _ring.size()];
 }
 
 PiAudioFrame *PiAudioFrameBuffer::tail() {
-    if (_size == 0) return nullptr;
-    return &_ring[_tail % _ring.size()];
+    if (size_ == 0) return nullptr;
+    return &_ring[tail_ % _ring.size()];
 }
 
 PiAudioFrame *PiAudioFrameBuffer::get(size_t index) {
     if (index < 0) return nullptr;
-    if (_size == 0) return nullptr;
-    if (index >= _size) return nullptr;
-    return &_ring[(_head + index) % _ring.size()];
+    if (size_ == 0) return nullptr;
+    if (index >= size_) return nullptr;
+    return &_ring[(head_ + index) % _ring.size()];
 }
 
 PiAudioFrame *PiAudioFrameBuffer::back(size_t count) {
-    return get(_size - count - 1);
+    return get(size_ - count - 1);
 }
 
 
@@ -307,11 +307,11 @@ public:
                         // Set thread name.
                         auto name = "pi-worker-" + std::to_string((int) num);
 #if __APPLE__
-                        pthread_setname_np(name.data());
+                        pthread_setname_np(name.c_str());
 #elif __linux__
-                        pthread_setname_np(pthread_self(), name.data());
+                        pthread_setname_np(pthread_self(), name.c_str());
 #elif __unix__
-                        pthread_setname_np(name.data());
+                        pthread_setname_np(name.c_str());
 #endif
 
                         // Register with PJSIP.
@@ -377,7 +377,7 @@ public:
     }
 
 public:
-    static std::shared_ptr<PiWorkerPool> instance() {
+    inline static std::shared_ptr<PiWorkerPool> instance() {
         static std::shared_ptr<PiWorkerPool> _workers =
                 std::make_shared<PiWorkerPool>();
         return _workers;
@@ -405,26 +405,26 @@ PiRecorder::PiRecorder() : AudioMedia() {
 }
 
 PiRecorder::~PiRecorder() {
-    std::unique_lock<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     unregisterMediaPort();
 
-    if (_vad) {
-        fvad_free(_vad);
-        _vad = nullptr;
+    if (vad_) {
+        fvad_free(vad_);
+        vad_ = nullptr;
     }
-    if (_encoder) {
-        opus_encoder_destroy(_encoder);
-        _encoder = nullptr;
+    if (encoder_) {
+        opus_encoder_destroy(encoder_);
+        encoder_ = nullptr;
     }
 
-    _frames->clear();
+    frames_->clear();
 }
 
 int PiRecorder::setVadMode(int mode) {
-    std::unique_lock<std::mutex> lock(_mutex);
-    if (_vad != nullptr) {
-        return fvad_set_mode(_vad, mode);
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (vad_ != nullptr) {
+        return fvad_set_mode(vad_, mode);
     }
     return 0;
 }
@@ -433,7 +433,7 @@ int PiRecorder::setVadMode(int mode) {
 void PiRecorder::create() PJSUA2_THROW(Error) {
 
     pjsua_logging_config_default(&pjsua_var.log_cfg);
-    std::unique_lock<std::mutex> lock(_mutex);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     if (id != PJSUA_INVALID_ID) {
         PJSUA2_RAISE_ERROR(PJ_EEXISTS);
@@ -441,94 +441,91 @@ void PiRecorder::create() PJSUA2_THROW(Error) {
 
     pj_status_t status;
 
-    status = pjsua_conf_get_port_info(0, &_masterInfo);
+    status = pjsua_conf_get_port_info(0, &master_info_);
     PJSUA2_CHECK_RAISE_ERROR(status);
 
     pj_str_t name = pj_str((char *) "pi_recorder");
     status = pjmedia_port_info_init(
-            &_base.info,
+            &base_.info,
             &name,
             PJMEDIA_SIG_PORT_PI_RECORDER_PORT,
-            _masterInfo.clock_rate,
-            _masterInfo.channel_count,
-            _masterInfo.bits_per_sample,
-            _masterInfo.samples_per_frame
+            master_info_.clock_rate,
+            master_info_.channel_count,
+            master_info_.bits_per_sample,
+            master_info_.samples_per_frame
     );
     PJSUA2_CHECK_RAISE_ERROR(status);
 
-    _ptime = _base.info.fmt.det.aud.frame_time_usec / 1000;
-    _base.put_frame = &PiRecorder::on_put_frame;
-    _base.get_frame = &PiRecorder::on_get_frame;
-    _base.on_destroy = &PiRecorder::on_destroy;
-    _base.port_data.pdata = this;
-    _base.port_data.ldata = sizeof(PiRecorder);
+    ptime_ = base_.info.fmt.det.aud.frame_time_usec / 1000;
+    base_.put_frame = &PiRecorder::on_put_frame;
+    base_.get_frame = &PiRecorder::on_get_frame;
+    base_.on_destroy = &PiRecorder::on_destroy;
+    base_.port_data.pdata = this;
+    base_.port_data.ldata = sizeof(PiRecorder);
 
     // Setup the PCM frame ring.
     auto historyFrames = 10;// 1000 / mPtime; // Keep 1 second of history.
-    if (_ptime >= PI_ENCODER_LOOKBACK) {
-        _dtxRewind = 1;
+    if (ptime_ >= PI_ENCODER_LOOKBACK) {
+        dtx_rewind_ = 1;
     } else {
-        _dtxRewind = PI_ENCODER_LOOKBACK / _ptime;
+        dtx_rewind_ = PI_ENCODER_LOOKBACK / ptime_;
     }
 
     // Setup OpusEncoder.
     int err;
-    _encoder = opus_encoder_create((int) _masterInfo.clock_rate, 1, OPUS_APPLICATION_VOIP, &err);
-    opus_encoder_ctl(_encoder, OPUS_SET_DTX(true));
+    encoder_ = opus_encoder_create((int) master_info_.clock_rate, 1, OPUS_APPLICATION_VOIP, &err);
+    opus_encoder_ctl(encoder_, OPUS_SET_DTX(true));
 //    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(_masterInfo.clock_rate));
-    opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(20000));
+    opus_encoder_ctl(encoder_, OPUS_SET_BITRATE(20000));
 //    opus_encoder_ctl(encoder, OPUS_SET_INBAND_FEC(1));
 //    opus_encoder_ctl(encoder, OPUS_SET_PACKET_LOSS_PERC(1));
-    opus_encoder_ctl(_encoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_MEDIUMBAND));
+    opus_encoder_ctl(encoder_, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_MEDIUMBAND));
 
     // Setup VAD.
-    _vad = fvad_new();
-    fvad_set_sample_rate(_vad, (int) _masterInfo.clock_rate);
-    fvad_set_mode(_vad, _vadMode);
+    vad_ = fvad_new();
+    fvad_set_sample_rate(vad_, (int) master_info_.clock_rate);
+    fvad_set_mode(vad_, vad_mode_);
 
     PJSUA2_CHECK_RAISE_ERROR(status);
 
-    registerMediaPort(&_base);
+    registerMediaPort(&base_);
 
-    _frames = std::make_unique<PiAudioFrameBuffer>(
+    frames_ = std::make_unique<PiAudioFrameBuffer>(
             (void *) this,
             (uint16_t) id,
             historyFrames,
-            _masterInfo.samples_per_frame);
+            master_info_.samples_per_frame);
 }
 
 PiEncoderStats PiRecorder::reset() {
-    std::unique_lock<std::mutex> lock(_mutex);
-    if (_isEncoding) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (is_encoding_) {
         auto start = std::chrono::high_resolution_clock::now();
-        _condition.wait(lock, [this] { return !_isEncoding; });
+        condition_.wait(lock, [this] { return !is_encoding_; });
         auto end = std::chrono::high_resolution_clock::now() - start;
-        _stats.totalEncoderWaitNanos += end.count();
+        stats_.totalEncoderWaitNanos += end.count();
     }
 
-    auto old_stats = _stats;
-    _stats = PiEncoderStats();
+    auto old_stats = stats_;
+    stats_ = PiEncoderStats();
 
-    if (_encoder != nullptr) {
-        auto err = opus_encoder_init(_encoder, _masterInfo.clock_rate, 1, OPUS_APPLICATION_VOIP);
-        if (err) {
-
-        }
+    if (encoder_ != nullptr) {
+        opus_encoder_init(encoder_, master_info_.clock_rate, 1, OPUS_APPLICATION_VOIP);
 //        err = opus_encoder_ctl(mEncoder, OPUS_SET_INBAND_FEC(fec));
 //        if (packetLossPct > -1) {
 //            err = opus_encoder_ctl(mEncoder, OPUS_SET_PACKET_LOSS_PERC(fec));
 //        }
     }
-    _vadState = 0;
-    if (_vad != nullptr) {
-        fvad_reset(_vad);
+    vad_state_ = 0;
+    if (vad_ != nullptr) {
+        fvad_reset(vad_);
     }
 
-    _frames->clear();
+    frames_->clear();
 
     // Clear DTX.
-    _inDtx = false;
-    _cycle++;
+    in_dtx_ = false;
+    cycle_++;
 
     return old_stats;
 }
@@ -551,27 +548,27 @@ pj_status_t PiRecorder::on_destroy(pjmedia_port *this_port) {
 inline void PiRecorder::doPutFrame(pjmedia_frame *frame) {
     // Treat NONE frame types as a heartbeat.
     if (frame->type == PJMEDIA_FRAME_TYPE_NONE) {
-        std::unique_lock<std::mutex> lock(_mutex);
+        std::unique_lock<std::mutex> lock(mutex_);
         auto start = high_resolution_now();
         onHeartbeat();
-        _stats.heartbeatCount++;
-        _stats.totalHeartbeatCpu += (high_resolution_now() - start);
+        stats_.heartbeatCount++;
+        stats_.totalHeartbeatCpu += (high_resolution_now() - start);
         return;
     }
 
     // Obtain lock.
-    std::unique_lock<std::mutex> lock(_mutex);
-    if (_isEncoding) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (is_encoding_) {
         auto start = high_resolution_now();
-        _condition.wait(lock, [this] { return !_isEncoding; });
-        _stats.totalEncoderWaitNanos += high_resolution_now() - start;
+        condition_.wait(lock, [this] { return !is_encoding_; });
+        stats_.totalEncoderWaitNanos += high_resolution_now() - start;
     }
-    _isEncoding = true;
-    _enqueuedAt = high_resolution_now();
+    is_encoding_ = true;
+    enqueued_at_ = high_resolution_now();
 
     try {
         // Ensure the PCM buffer has memory.
-        if (_frames->bufferSize() != frame->size) {
+        if (frames_->bufferSize() != frame->size) {
             throw Error(
                     PJ_ERRNO_START,
                     "PiEncoder::doPutFrame",
@@ -582,7 +579,7 @@ inline void PiRecorder::doPutFrame(pjmedia_frame *frame) {
         }
 
         // Push the next frame.
-        _frames->push(_cycle, frame, _stats.frameCount);
+        frames_->push(cycle_, frame, stats_.frameCount);
 
         // Enqueue.
         PiWorkerPool::get()->enqueue([this] { workerRun(); });
@@ -595,7 +592,7 @@ inline void PiRecorder::workerEncode(PiAudioFrame *frame) {
     auto start = high_resolution_now();
     // Encode Opus.
     frame->opus_size = opus_encode(
-            _encoder,
+            encoder_,
             (opus_int16 *) &frame->pcm,
             (int) frame->pcm_samples,
             (unsigned char *) &frame->opus,
@@ -613,12 +610,12 @@ inline void PiRecorder::workerEncode(PiAudioFrame *frame) {
     // Call into
     onFrame(
             frame,
-            _stats.lastExternCpu
+            stats_.lastExternCpu
     );
 
-    _stats.totalOpusCpu += frame->opus_cpu;
-    _stats.lastExternCpu = (pj_uint64_t) (high_resolution_now() - externalStart);
-    _stats.totalExternCpu += _stats.lastExternCpu;
+    stats_.totalOpusCpu += frame->opus_cpu;
+    stats_.lastExternCpu = (pj_uint64_t) (high_resolution_now() - externalStart);
+    stats_.totalExternCpu += stats_.lastExternCpu;
 }
 
 inline void PiRecorder::workerEncodeDTX(PiAudioFrame *frame) {
@@ -629,11 +626,11 @@ inline void PiRecorder::workerEncodeDTX(PiAudioFrame *frame) {
     // Call into
     onFrame(
             frame,
-            _stats.lastExternCpu
+            stats_.lastExternCpu
     );
 
-    _stats.lastExternCpu = (pj_uint64_t) (high_resolution_now() - start);
-    _stats.totalExternCpu += _stats.lastExternCpu;
+    stats_.lastExternCpu = (pj_uint64_t) (high_resolution_now() - start);
+    stats_.totalExternCpu += stats_.lastExternCpu;
 }
 
 inline void PiRecorder::workerDTX(PiAudioFrame *frame) {
@@ -646,10 +643,10 @@ inline void PiRecorder::workerDTX(PiAudioFrame *frame) {
 //            mStats.lastExternCpu
 //    );
 
-    _stats.lastExternCpu = (pj_uint64_t) (high_resolution_now() - start);
-    _stats.totalExternCpu += _stats.lastExternCpu;
-    _stats.frameCount++;
-    _totalFrames++;
+    stats_.lastExternCpu = (pj_uint64_t) (high_resolution_now() - start);
+    stats_.totalExternCpu += stats_.lastExternCpu;
+    stats_.frameCount++;
+    total_frames_++;
 }
 
 /**
@@ -657,22 +654,22 @@ inline void PiRecorder::workerDTX(PiAudioFrame *frame) {
  */
 inline void PiRecorder::workerRun() {
     auto start = high_resolution_now();
-    auto enqueue_end = start - _enqueuedAt;
-    std::unique_lock<std::mutex> lock(_mutex);
+    auto enqueue_end = start - enqueued_at_;
+    std::unique_lock<std::mutex> lock(mutex_);
     auto vad_start = high_resolution_now();
 
-    _stats.totalEnqueueNanos += enqueue_end;
-    auto frame = _frames->tail();
+    stats_.totalEnqueueNanos += enqueue_end;
+    auto frame = frames_->tail();
 
     // Process VAD.
-    _vadState = fvad_process(_vad, (int16_t *) &frame->pcm, (size_t) frame->pcm_samples);
+    vad_state_ = fvad_process(vad_, (int16_t *) &frame->pcm, (size_t) frame->pcm_samples);
     auto end_vad = high_resolution_now();
 
-    frame->vad = _vadState;
+    frame->vad = vad_state_;
 
     // Calculate VAD cpu time.
     frame->vad_cpu = (end_vad - vad_start);
-    _stats.totalVadCpu += frame->vad_cpu;
+    stats_.totalVadCpu += frame->vad_cpu;
 
 //    if (_dtx) {}
 //    Silence?
@@ -722,16 +719,16 @@ inline void PiRecorder::workerRun() {
 //        _totalFrames++;
 //    }
     workerEncode(frame);
-    _stats.frameCount++;
-    _totalFrames++;
+    stats_.frameCount++;
+    total_frames_++;
 
     // Flip encoding flag.
-    _isEncoding = false;
+    is_encoding_ = false;
     // Manual unlocking is done before notifying, to avoid waking up
     // the waiting thread only to block again (see notify_one for details)
     lock.unlock();
 
-    _condition.notify_one();
+    condition_.notify_one();
 }
 
 int PiRecorder::encoderThreads() {

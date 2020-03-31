@@ -19,7 +19,7 @@ link_directories(${PARENT_DIR}/libs/fvad)
 link_directories(${PARENT_DIR}/libs/opus)
 link_directories(${PARENT_DIR}/libs/ssl)
 link_directories(${PARENT_DIR}/libs/crypto)
-link_directories(${PARENT_DIR}/libs/amrnb)
+#link_directories(${PARENT_DIR}/libs/amrnb)
 link_directories(${PARENT_DIR}/libs/g7221)
 link_directories(${PARENT_DIR}/libs/gsm)
 link_directories(${PARENT_DIR}/libs/libilbccodec)
@@ -56,19 +56,21 @@ set_property(TARGET pj-ext PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 if (APPLE)
     target_link_libraries(pj-ext
-            "-framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox -framework Foundation -framework AppKit -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia -framework VideoToolbox -framework Security"
+        #     "-framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox -framework Foundation -framework AppKit -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia -framework VideoToolbox -framework Security"
+            "-framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox -framework Foundation -framework AppKit"
             dl
             m
             pthread
             )
 
     target_link_libraries(example
-            "-framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox -framework Foundation -framework AppKit -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia -framework VideoToolbox -framework Security"
+        #     "-framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox -framework Foundation -framework AppKit -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia -framework VideoToolbox -framework Security"
+            "-framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox -framework Foundation -framework AppKit"
             dl
             m
             pthread
 
-            opencore-amrnb
+#            opencore-amrnb
             fvad
             opus
             ssl
@@ -81,7 +83,7 @@ if (APPLE)
             pjmedia
             pjmedia-codec
             pjmedia-audiodev
-            pjmedia-videodev
+#            pjmedia-videodev
             pjnath
             pjlib-util
             srtp
@@ -91,14 +93,14 @@ if (APPLE)
             ilbccodec
             g7221
             webrtc
-            yuv
+#            yuv
             pjsua
             pjsua2
             )
 ELSEIF (UNIX)
     target_link_libraries(pj-ext
             uuid
-            asound
+#            asound
             dl
             m
             pthread

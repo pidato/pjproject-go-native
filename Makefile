@@ -31,7 +31,6 @@ ifeq ($(UNAME_S),Darwin)
 	ASSEMBLE_EXTRA=- rm libs/srtp/aes_icm.o
 	PJPROJECT_CONFIGURE=\
 ./configure \
---disable-sound \
 --disable-video \
 --disable-opencore-amr \
 --with-opus=$(OPUS_DIR) \
@@ -57,7 +56,7 @@ debug-configure: DEFAULT_CFLAGS += -DDEBUG -g
 debug-configure: DEFAULT_CXXFLAGS += -DDEBUG -g
 debug-configure: configure
 
-clean: clean-libs clean-include clean-fvad clean-opus clean-ssl clean-pjproject
+clean: clean-libs clean-include clean-fvad clean-opus clean-ssl clean-pjproject clean-ext
 
 build-deps: build-fvad build-opus build-ssl build-pj move-include move-libs
 

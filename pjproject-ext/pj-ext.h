@@ -197,27 +197,6 @@ public:
     virtual void onError(Error &e) {}
 
     /**
-     * Invoked on each frame in DTX mode.
-     *
-     * @param cycle
-     * @param frameNum
-     * @param dtxLookback
-     * @param vadState
-     * @param pcm
-     * @param size
-     * @param timestamp
-     * @param opusBuf
-     * @param opusResult
-     * @param vadCPU
-     * @param opusCPU
-     * @param prevExternCPU
-     */
-    virtual void onFrameDTX(
-            void *frame,
-            pj_uint64_t prevExternCPU
-    ) {}
-
-    /**
      *
      * @param frameNum
      * @param vad_state

@@ -1,6 +1,7 @@
 FVAD_DIR="$(PWD)/fvad"
 OPUS_DIR="$(PWD)/opus"
 SSL_DIR="$(PWD)/openssl"
+BCG729_DIR="$(PWD)/bcg729"
 OPENCORE_AMR_DIR="$(PWD)/opencore-amr"
 PLATFORM_SUFFIX=
 UNAME_S := $(shell uname -s)
@@ -22,6 +23,7 @@ ifeq ($(UNAME_S),Linux)
 --disable-opencore-amr \
 --with-opus=$(OPUS_DIR) \
 --with-ssl=$(SSL_DIR) \
+--with-bcg729=$(BCG729_DIR) \
 CXXFLAGS="-std=c++17 $(DEFAULT_CXXFLAGS)" \
 CFLAGS="$(DEFAULT_CXXFLAGS) -DPJSUA_MAX_CALLS=256 -DPJMEDIA_CODEC_L16_HAS_16KHZ_MONO"
 endif
@@ -35,6 +37,7 @@ ifeq ($(UNAME_S),Darwin)
 --disable-opencore-amr \
 --with-opus=$(OPUS_DIR) \
 --with-ssl=$(SSL_DIR) \
+--with-bcg729=$(BCG729_DIR) \
 CXXFLAGS="-std=c++17 $(DEFAULT_CXXFLAGS)" \
 CFLAGS="$(DEFAULT_CFLAGS) -DPJSUA_MAX_CALLS=256 -DPJMEDIA_CODEC_L16_HAS_16KHZ_MONO"
 endif
@@ -46,17 +49,17 @@ debug: clean debug-configure debug-dep build-ext assemble
 
 ext: build-deps build-ext assemble
 
-dep: build-fvad build-opus build-ssl build-pjproject move-include move-libs
+dep: build-g729 build-fvad build-opus build-ssl build-pjproject move-include move-libs
 debug-dep: DEFAULT_CFLAGS += -DDEBUG -g
 debug-dep: DEFAULT_CXXFLAGS += -DDEBUG -g
 debug-dep: dep
 
-configure: configure-fvad configure-opus configure-ssl configure-pjproject
+configure: configure-g729 configure-fvad configure-opus configure-ssl configure-pjproject
 debug-configure: DEFAULT_CFLAGS += -DDEBUG -g
 debug-configure: DEFAULT_CXXFLAGS += -DDEBUG -g
 debug-configure: configure
 
-clean: clean-libs clean-include clean-fvad clean-opus clean-ssl clean-pjproject clean-ext
+clean: clean-libs clean-include clean-g729 clean-fvad clean-opus clean-ssl clean-pjproject clean-ext
 
 build-deps: build-fvad build-opus build-ssl build-pj move-include move-libs
 
@@ -74,12 +77,21 @@ build-pj:
 build-pjproject:
 	- cd pjproject; $(MAKE) dep && $(MAKE)
 
-clean-opencore:
-	- cd opencore-amr; $(MAKE) clean
-	- cd opencore-amr; rm -r lib
+configure-g729:
+	cd bcg729; cmake -S . -B build
+
+build-g729:
+	- cd bcg729/build; $(MAKE) clean; $(MAKE)
+	- cd bcg729; mkdir lib
+	- cp bcg729/build/src/libbcg729.a bcg729/lib/libbcg729.a
+
+clean-g729:
+	- cd bcg729; $(MAKE) clean
+	- cd bcg729; rm -r lib
+	- cd bcg729; rm -r build
 
 configure-opencore:
-	cd opencore-amr;\
+	cd bcg729;\
 	autoreconf -i;\
 	./configure --enable-static --enable-shared CXXFLAGS="$(DEFAULT_CXXFLAGS)" CFLAGS="$(DEFAULT_CFLAGS)";\
 	$(MAKE) clean
@@ -88,6 +100,10 @@ build-opencore:
 	- cd opencore-amr; $(MAKE)
 	- cd opencore-amr; mkdir lib
 	- cd opencore-amr; cp ./amrnb/.libs/libopencore-amrnb.a ./lib/libopencore-amrnb.a
+
+clean-opencore:
+	- cd opencore-amr; $(MAKE) clean
+	- cd opencore-amr; rm -r lib
 
 clean-fvad:
 	- cd fvad; $(MAKE) clean
@@ -153,6 +169,8 @@ clean-include:
 move-include:
 	- rm -r include
 	- mkdir include
+	cp -r bcg729/include/bcg729 ./include/bcg729
+	- rm ./include/bcg729/Makefile.am
 	cp -r fvad/include ./
 	cp -r opus/include ./include/opus
 	cp -r pjproject/pjlib/include ./
@@ -168,6 +186,7 @@ move-include:
 move-libs:
 	- rm -r libs
 	- mkdir libs
+	- mkdir libs/bcg729
 	- mkdir libs/fvad
 	- mkdir libs/opus
 	- mkdir libs/ssl
@@ -194,6 +213,7 @@ move-libs:
 	- mkdir libs/pjsua
 	- mkdir libs/pjsua2
 	- mkdir libs/pj-ext
+	cp ./bcg729/lib/libbcg729.a ./libs/bcg729/libbcg729.a
 	cp ./opus/.libs/libopus.a ./libs/opus/libopus.a
 	cp ./opus/.libs/libopus.a ./libs/libopus.a
 	cp ./fvad/src/.libs/libfvad.a ./libs/fvad/libfvad.a
@@ -224,6 +244,7 @@ move-libs:
 
 assemble:
 	- cp pjproject-ext/build/libpj-ext.a ./libs/pj-ext/libpj-ext.a
+	cd libs/bcg729; ar -x libbcg729.a
 	cd libs/fvad; ar -x libfvad.a
 	cd libs/opus; ar -x libopus.a
 	cd libs/ssl; ar -x libssl.a
@@ -250,7 +271,7 @@ assemble:
 	cd libs/pjsua2; ar -x libpjsua2.a
 	cd libs/pj-ext; ar -x libpj-ext.a
 # 	cd libs/amrnb; ar -x libopencore-amrnb.a
-	cd libs; ar -q libpjproject-2.10.a fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o pjsua/*.o pjsua2/*.o pj-ext/*.o
+	cd libs; ar -q libpjproject-2.10.a bcg729/*.o fvad/*.o opus/*.o crypto/*.o ssl/*.o pj/*.o pjsip/*.o pjsip-ua/*.o pjsip-simple/*.o pjmedia/*.o pjmedia-audiodev/*.o pjmedia-codec/*.o pjnath/*.o pjlib-util/*.o srtp/*.o resample/*.o gsm/*.o speex/*.o libilbccodec/*.o g7221/*.o webrtc/*.o pjsua/*.o pjsua2/*.o pj-ext/*.o
 
 print:
 	@ echo "PLATFORM SUFFIX = $(PLATFORM_SUFFIX)"

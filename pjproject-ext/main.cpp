@@ -15,12 +15,6 @@ using namespace std;
 
 class Pi2Port : public PiRecorder {
 public:
-    inline void onFrameDTX(void *_frame, pj_uint64_t prevExternCPU) override {
-        auto frame = (PiAudioFrame*)_frame;
-        total_extern_cpu_ += prevExternCPU;
-        total_extern_count_++;
-    }
-
     inline void onFrame(void *_frame, pj_uint64_t prevExternCPU) override {
         auto frame = (PiAudioFrame*)_frame;
 
@@ -119,7 +113,7 @@ int main() {
 
     // Initialize endpoint
     EpConfig ep_cfg;
-    ep_cfg.logConfig.level = 1;
+    ep_cfg.logConfig.level = 6;
     ep_cfg.medConfig.maxMediaPorts = 2048;
     ep_cfg.uaConfig.maxCalls = 256;
     ep_cfg.medConfig.audioFramePtime = 20;

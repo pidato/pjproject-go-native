@@ -15,6 +15,7 @@ message("Parent Dir: ${PARENT_DIR}")
 
 include_directories(${PARENT_DIR}/include)
 
+link_directories(${PARENT_DIR}/libs/bcg729)
 link_directories(${PARENT_DIR}/libs/fvad)
 link_directories(${PARENT_DIR}/libs/opus)
 link_directories(${PARENT_DIR}/libs/ssl)
@@ -71,6 +72,7 @@ if (APPLE)
             pthread
 
 #            opencore-amrnb
+            bcg729
             fvad
             opus
             ssl

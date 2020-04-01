@@ -21,9 +21,7 @@ ifeq ($(UNAME_S),Linux)
 --disable-sound \
 --disable-video \
 --disable-opencore-amr \
---with-opus=$(OPUS_DIR) \
 --with-ssl=$(SSL_DIR) \
---with-bcg729=$(BCG729_DIR) \
 CXXFLAGS="-std=c++17 $(DEFAULT_CXXFLAGS)" \
 CFLAGS="$(DEFAULT_CXXFLAGS) -DPJSUA_MAX_CALLS=256 -DPJMEDIA_CODEC_L16_HAS_16KHZ_MONO"
 endif
@@ -62,6 +60,14 @@ debug-configure: configure
 clean: clean-libs clean-include clean-g729 clean-fvad clean-opus clean-ssl clean-pjproject clean-ext
 
 build-deps: build-fvad build-opus build-ssl build-pj move-include move-libs
+
+install-deps: install-g729 install-opus
+
+install-g729:
+	- cd bcg729; ./autogen.sh; autoconf; ./configure CFLAGS="$(DEFAULT_CFLAGS)"; $(MAKE) clean; $(MAKE); $(MAKE) install
+
+install-opus: configure-opus build-opus
+	- cd opus; $(MAKE) install
 
 clean-pjproject:
 	- cd pjproject; $(MAKE) clean

@@ -77,6 +77,9 @@ build-pj:
 build-pjproject:
 	- cd pjproject; $(MAKE) dep && $(MAKE)
 
+build-soxr:
+	cd soxr; cmake . -DBUILD_SHARED_LIBS=OFF -DWITH_OPENMP=OFF; $(MAKE)
+
 configure-g729:
 	cd bcg729; cmake -S . -B build
 

@@ -13,6 +13,8 @@
 
 #include <stdlib.h>
 #include "vad/vad_core.h"
+#include "vad/vad_sp.h"
+#include "signal_processing/resample_by_2_internal.h"
 
 // valid sample rates in kHz
 static const int valid_rates[] = { 8, 16, 32, 48 };
@@ -104,4 +106,18 @@ int fvad_process(Fvad* inst, const int16_t* frame, size_t length)
     if (rv > 0) rv = 1;
 
     return rv;
+}
+
+void fvad_downsample_by_2(const int16_t* signal_in,
+                     int16_t* signal_out,
+                     int32_t* filter_state,
+                     size_t in_length)
+{
+    WebRtcSpl_DownsampleBy2(signal_in, in_length, signal_out, filter_state);
+}
+
+void fvad_upsample_by_2(const int16_t* in, size_t len,
+                           int16_t* out, int32_t* filter_state)
+{
+    WebRtcSpl_UpsampleBy2(in, len, out, filter_state);
 }
